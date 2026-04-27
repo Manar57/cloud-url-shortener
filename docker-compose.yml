@@ -1,0 +1,72 @@
+services:
+
+  database:
+    image: postgres:15-alpine
+    container_name: url_shortener_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: url_shortener
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d url_shortener"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  logger:
+    build: ./services/logger
+    container_name: logger_service
+    environment:
+      DATABASE_URL: postgresql://admin:admin123@database:5432/url_shortener
+      DEBUG_MODE: "true"
+    ports:
+      - "5001:5001"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+  shortener:
+    build: ./services/shortener
+    container_name: shortener_service
+    environment:
+      DATABASE_URL: postgresql://admin:admin123@database:5432/url_shortener
+      LOGGER_URL: http://logger:5001
+      BASE_URL: http://localhost:5000
+      DEBUG_MODE: "true"
+    ports:
+      - "5000:5000"
+    depends_on:
+      database:
+        condition: service_healthy
+      logger:
+        condition: service_healthy
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
