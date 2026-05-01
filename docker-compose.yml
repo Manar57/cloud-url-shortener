@@ -46,7 +46,7 @@ services:
     environment:
       DATABASE_URL: postgresql://admin:admin123@database:5432/url_shortener
       LOGGER_URL: http://logger:5001
-      BASE_URL: http://54.198.74.183:5000
+      BASE_URL: http://3.82.55.240:5000
       DEBUG_MODE: "true"
     ports:
       - "5000:5000"
