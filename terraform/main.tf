@@ -72,3 +72,12 @@ resource "aws_instance" "app_server" {
     Name = "url-shortener-server"
   }
 }
+
+resource "aws_eip" "app_ip" {
+  domain = "vpc"
+}
+
+resource "aws_eip_association" "app_ip_assoc" {
+  instance_id   = aws_instance.app_server.id
+  allocation_id = aws_eip.app_ip.id
+}
