@@ -1,26 +1,28 @@
 name: Deploy to EC2
 
 on:
-  push:
-    branches:
-      - main
+push:
+branches:
+- main
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+deploy:
+runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+```
+steps:
+  - name: Checkout
+    uses: actions/checkout@v3
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd cloud-url-shortener
-            git pull
-            docker compose down
-            docker compose up -d --build
+  - name: Deploy via SSH
+    uses: appleboy/ssh-action@v1.0.0
+    with:
+      host: ${{ secrets.EC2_HOST }}
+      username: ec2-user
+      key: ${{ secrets.EC2_SSH_KEY }}
+      script: |
+        cd /home/ec2-user/cloud-url-shortener
+        git pull
+        docker-compose down
+        docker-compose up -d --build
+```
