@@ -47,6 +47,7 @@ resource "aws_security_group" "app_sg" {
 resource "aws_instance" "app_server" {
   ami           = "ami-0c02fb55956c7d316" # Amazon Linux
   instance_type = "t3.micro"
+  key_name = "my-key"
 
   security_groups = [aws_security_group.app_sg.name]
 
