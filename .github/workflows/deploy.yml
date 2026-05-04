@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,6 +17,7 @@ jobs:
           host: 52.23.39.251
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
+          debug: true
           script: |
             cd /home/ec2-user/cloud-url-shortener
             git pull
