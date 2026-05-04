@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cloud Based URL Shortner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --accent: #c8f060;
+      --accent-dim: #8faa3a;
+      --text: #f0f0f0;
+      --muted: #666;
+      --error: #ff5f5f;
+      --mono: 'Space Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow blob */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20vh;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(200,240,96,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 1;
+      padding: 2rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .logo span { color: var(--muted); font-weight: 400; }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 0.25rem 0.6rem;
+      border-radius: 2px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-family: var(--mono);
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1.05;
+      text-align: center;
+      margin-bottom: 1rem;
+      letter-spacing: -0.03em;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+      margin-bottom: 3.5rem;
+      font-weight: 300;
+    }
+
+    /* Card */
+    .card {
+      width: 100%;
+      max-width: 580px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .card-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 0.9rem;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      background: rgba(200,240,96,0.04);
+      border-bottom: 2px solid var(--accent);
+      margin-bottom: -1px;
+    }
+
+    .tab:hover:not(.active) { color: var(--text); }
+
+    .panel { padding: 2rem; }
+    .panel.hidden { display: none; }
+
+    .field { margin-bottom: 1.25rem; }
+
+    label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="text"], input[type="url"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0.75rem 1rem;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    .btn {
+      width: 100%;
+      padding: 0.85rem;
+      background: var(--accent);
+      color: #0d0d0d;
+      border: none;
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      margin-top: 0.5rem;
+    }
+
+    .btn:hover { background: #d8ff6a; }
+    .btn:active { transform: scale(0.99); }
+    .btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+
+    /* Result */
+    .result {
+      margin-top: 1.5rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1rem 1.25rem;
+      display: none;
+      animation: fadeUp 0.25s ease;
+    }
+
+    .result.show { display: block; }
+    .result.error { border-color: var(--error); }
+
+    .result-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .result.error .result-label { color: var(--error); }
+
+    .result-url {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      color: var(--accent);
+      word-break: break-all;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      justify-content: space-between;
+    }
+
+    .result-url.error-text { color: var(--error); font-size: 0.85rem; }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* Stats output */
+    .stats-block {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding: 0.4rem 0;
+    }
+
+    .stats-row:last-child { border-bottom: none; }
+    .stats-key { color: var(--muted); }
+    .stats-val { color: var(--accent); }
+
+    .loader {
+      display: none;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0.5rem 0;
+      letter-spacing: 0.1em;
+    }
+
+    .loader.show { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Manar_And_Sarah<span>.io</span></div>
+  <div class="badge">v1.0</div>
+</header>
+
+<main>
+  <div class="hero-label">// url shortener</div>
+  <h1>cut the<br/><em>noise.</em></h1>
+  <p class="subtitle">paste long. get short. share anywhere.</p>
+
+  <div class="card">
+    <div class="card-tabs">
+      <button class="tab active" onclick="switchTab('shorten')">Shorten</button>
+      <button class="tab" onclick="switchTab('stats')">Stats</button>
+    </div>
+
+    <!-- Shorten Panel -->
+    <div class="panel" id="panel-shorten">
+      <div class="field">
+        <label>Long URL</label>
+        <input type="url" id="long-url" placeholder="https://example.com/very/long/url" />
+      </div>
+      <button class="btn" id="shorten-btn" onclick="shortenUrl()">→ Shorten</button>
+      <div class="loader" id="shorten-loader">processing...</div>
+
+      <div class="result" id="shorten-result">
+        <div class="result-label" id="shorten-result-label">Short URL</div>
+        <div class="result-url" id="shorten-result-content">
+          <span id="short-url-text"></span>
+          <button class="copy-btn" id="copy-btn" onclick="copyUrl()">copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Panel -->
+    <div class="panel hidden" id="panel-stats">
+      <div class="field">
+        <label>Short Code</label>
+        <input type="text" id="stats-code" placeholder="e.g. aB3xYz" />
+      </div>
+      <button class="btn" onclick="getStats()">→ Get Stats</button>
+      <div class="loader" id="stats-loader">fetching...</div>
+
+      <div class="result" id="stats-result">
+        <div class="result-label" id="stats-result-label">Visit Stats</div>
+        <div id="stats-content"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>built on flask + postgres &nbsp;·&nbsp; all links are permanent</footer>
+
+<script>
+  const API = '';  // same-origin; nginx proxies /shorten, /stats, /<code>
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0 && name === 'shorten') || (i === 1 && name === 'stats'));
+    });
+    document.getElementById('panel-shorten').classList.toggle('hidden', name !== 'shorten');
+    document.getElementById('panel-stats').classList.toggle('hidden', name !== 'stats');
+  }
+
+  function showResult(id, labelId, content, isError = false) {
+    const el = document.getElementById(id);
+    el.className = 'result show' + (isError ? ' error' : '');
+    if (labelId) document.getElementById(labelId).textContent = isError ? 'Error' : (id === 'shorten-result' ? 'Short URL' : 'Visit Stats');
+    if (typeof content === 'string') {
+      const contentEl = document.getElementById(id === 'shorten-result' ? 'shorten-result-content' : 'stats-content');
+      if (id === 'shorten-result') {
+        document.getElementById('short-url-text').textContent = content;
+        document.getElementById('short-url-text').className = isError ? 'error-text' : '';
+        document.getElementById('copy-btn').style.display = isError ? 'none' : '';
+      } else {
+        contentEl.innerHTML = `<div class="result-url error-text">${content}</div>`;
+      }
+    }
+  }
+
+  async function shortenUrl() {
+    const url = document.getElementById('long-url').value.trim();
+    if (!url) return;
+
+    const btn = document.getElementById('shorten-btn');
+    const loader = document.getElementById('shorten-loader');
+    btn.disabled = true;
+    loader.classList.add('show');
+    document.getElementById('shorten-result').className = 'result';
+
+    try {
+      const res = await fetch(`${API}/shorten`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ long_url: url })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showResult('shorten-result', 'shorten-result-label', data.error || 'Something went wrong', true);
+      } else {
+        document.getElementById('short-url-text').textContent = data.short_url;
+        document.getElementById('short-url-text').className = '';
+        document.getElementById('copy-btn').style.display = '';
+        const el = document.getElementById('shorten-result');
+        el.className = 'result show';
+        document.getElementById('shorten-result-label').textContent = 'Short URL';
+      }
+    } catch (e) {
+      showResult('shorten-result', 'shorten-result-label', 'Could not reach server', true);
+    } finally {
+      btn.disabled = false;
+      loader.classList.remove('show');
+    }
+  }
+
+  async function getStats() {
+    const code = document.getElementById('stats-code').value.trim();
+    if (!code) return;
+
+    const loader = document.getElementById('stats-loader');
+    loader.classList.add('show');
+    document.getElementById('stats-result').className = 'result';
+
+    try {
+      const res = await fetch(`${API}/stats/${code}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        showResult('stats-result', 'stats-result-label', data.error || 'Not found', true);
+      } else {
+        const rows = Object.entries(data).map(([k, v]) =>
+          `<div class="stats-row"><span class="stats-key">${k}</span><span class="stats-val">${v ?? '—'}</span></div>`
+        ).join('');
+        const el = document.getElementById('stats-result');
+        el.className = 'result show';
+        document.getElementById('stats-result-label').textContent = 'Visit Stats';
+        document.getElementById('stats-content').innerHTML = `<div class="stats-block">${rows}</div>`;
+      }
+    } catch (e) {
+      showResult('stats-result', 'stats-result-label', 'Could not reach server', true);
+    } finally {
+      loader.classList.remove('show');
+    }
+  }
+
+  function copyUrl() {
+    const text = document.getElementById('short-url-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'copied!';
+      setTimeout(() => btn.textContent = 'copy', 1500);
+    });
+  }
+
+  document.getElementById('long-url').addEventListener('keydown', e => {
+    if (e.key === 'Enter') shortenUrl();
+  });
+  document.getElementById('stats-code').addEventListener('keydown', e => {
+    if (e.key === 'Enter') getStats();
+  });
+</script>
+</body>
+</html>
