@@ -71,6 +71,7 @@ resource "aws_instance" "app_server" {
 
               cd /home/ec2-user
               git clone https://github.com/Manar57/cloud-url-shortener.git
+              chown -R ec2-user:ec2-user cloud-url-shortener
               cd cloud-url-shortener
               docker compose up -d --build
               EOF
@@ -87,8 +88,4 @@ resource "aws_eip" "app_ip" {
 resource "aws_eip_association" "app_ip_assoc" {
   instance_id   = aws_instance.app_server.id
   allocation_id = aws_eip.app_ip.id
-}
-
-output "ec2_public_ip" {
-  value = aws_eip.app_ip.public_ip
 }
