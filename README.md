@@ -44,6 +44,28 @@ Internet ──── :80 ────► │  ┌──────────
 
 ---
 
+## 15-Factor App Compliance
+
+| # | Factor | How it's addressed |
+|---|---|---|
+| 1 | **Codebase** | Single Git repo (`cloud-url-shortener`); one codebase deployed to one environment via `git pull` on the EC2 instance. |
+| 2 | **Dependencies** | Each service declares dependencies explicitly (`requirements.txt` + `Dockerfile`); nothing is assumed from the host. |
+| 3 | **Config** | All environment-specific values (`DB_USER`, `DB_PASS`, `PUB_DNS`) are injected via `.env` written by CI — never hardcoded in source. |
+| 4 | **Backing services** | Postgres and the logger are consumed over the Docker network by URL (`DATABASE_URL`, `LOGGER_URL`), swappable without code changes. |
+| 5 | **Build, release, run** | GitHub Actions builds images (`--build`), composes them with the `.env` release config, then runs containers — three distinct stages. |
+| 6 | **Processes** | Each service is a stateless process; persistent state lives exclusively in Postgres, not in container memory or local disk. |
+| 7 | **Port binding** | Each service exports itself via a port (`5000`, `5001`), (`80`) declared in `docker-compose.yml` — no app server required externally. |
+| 8 | **Concurrency** | Services are independently scalable via Docker Compose `scale` or by running multiple containers behind nginx. |
+| 9 | **Disposability** | Containers start fast and shut down cleanly; Postgres data survives restarts via a named volume (`postgres_data`). |
+| 10 | **Dev/prod parity** | Single-environment setup; dev and prod run the same Docker images locally and on EC2, with only `.env` values differing between a developer's machine and the server. |
+| 11 | **Logs** | Services write to stdout/stderr; logs are accessible via `docker compose logs` and can be forwarded to any aggregator. |
+| 12 | **Admin processes** | One-off tasks (e.g. DB inspection) run as ephemeral commands via `docker exec` against the running container. |
+| 13 | **API first** | Shortener and logger communicate exclusively over HTTP REST APIs; the frontend is fully decoupled from backend logic. |
+| 14 | **Telemetry** | The logger records IP, user agent, and timestamp per visit to Postgres; /stats/:code exposes total visit count per URL; /health checks live DB connectivity and returns 503 if disconnected. |
+| 15 | **Auth & security** | DB credentials and SSH keys are stored as GitHub Secrets, never in source; `DEBUG_MODE` gates exposure of error details in responses. |
+
+---
+
 ## Infrastructure
 
 Infrastructure is provisioned with **Terraform**. On `terraform apply`, it:
@@ -63,7 +85,7 @@ After provisioning, the instance is ready for the GitHub Actions deploy workflow
 **Prerequisites:** Docker, Docker Compose
 
 ```bash
-git clone https://github.com/Manar57/cloud-url-shortener
+git clone https://github.com/<your-org>/cloud-url-shortener
 cd cloud-url-shortener
 ```
 
@@ -71,8 +93,8 @@ Create a `.env` file:
 
 ```env
 DB_USER=admin
-DB_PASS=example_pass
-PUB_DNS=http://ec2-40-42-45-48.compute-1.amazonaws.com
+DB_PASS=admin123
+PUB_DNS=http://localhost:5000
 ```
 
 Start all services:
@@ -179,7 +201,13 @@ Redirects to the original URL. Returns `302` on success, `404` if the code doesn
 
 Returns visit statistics for a short code, proxied from the logger service.
 
-**Response `200`:** JSON object with visit metadata (structure depends on logger implementation).
+**Response `200`:**
+```json
+{
+  "code": "aB3xYz",
+  "total_visits": 42
+}
+```
 
 **Errors:** `404` if code not found, `503` if the logger is unavailable.
 
