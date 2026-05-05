@@ -14,12 +14,29 @@ jobs:
       - name: SSH into EC2 and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 52.23.39.251
+          host: ${{ secrets.EC2_EIP }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          debug: true
+          envs: EC2_EIP,DB_USER,DB_PASS
           script: |
+            set -e
             cd /home/ec2-user/cloud-url-shortener
-            git pull
-            docker compose down
+
+            # Build PUB_DNS from EIP (e.g. a.b.c.d → http://ec2-a-b-c-d.compute-1.amazonaws.com)
+            FORMATTED_IP=$(echo "$EC2_EIP" | tr '.' '-')
+            PUB_DNS="http://ec2-${FORMATTED_IP}.compute-1.amazonaws.com"
+
+            # Write .env
+            {
+              echo "DB_USER=$DB_USER"
+              echo "DB_PASS=$DB_PASS"
+              echo "PUB_DNS=$PUB_DNS"
+            } > .env
+
+            git pull origin main
             docker compose up -d --build
+            docker compose ps
+        env:
+          EC2_EIP: ${{ secrets.EC2_EIP }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}

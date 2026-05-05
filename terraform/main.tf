@@ -82,7 +82,3 @@ resource "aws_eip_association" "app_ip_assoc" {
   instance_id   = aws_instance.app_server.id
   allocation_id = aws_eip.app_ip.id
 }
-
-data "aws_instance" "current" {
-  instance_id = aws_instance.app_server.id
-}
