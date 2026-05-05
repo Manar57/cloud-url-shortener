@@ -480,13 +480,29 @@
 
   function copyUrl() {
     const text = document.getElementById('short-url-text').textContent;
-    navigator.clipboard.writeText(text).then(() => {
+    
+    if (navigator.clipboard && window.isSecureContext) {
+      // Modern way — HTTPS or localhost only
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'copied!';
+        setTimeout(() => btn.textContent = 'copy', 1500);
+      });
+    } else {
+      // Fallback for plain HTTP
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
       const btn = document.getElementById('copy-btn');
       btn.textContent = 'copied!';
       setTimeout(() => btn.textContent = 'copy', 1500);
-    });
+    }
   }
-
   document.getElementById('long-url').addEventListener('keydown', e => {
     if (e.key === 'Enter') shortenUrl();
   });
